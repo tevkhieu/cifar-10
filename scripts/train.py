@@ -1,12 +1,9 @@
 import os
+import argparse
 
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torchvision.datasets import CIFAR10
-import torchvision.transforms as transforms
-import torch.nn.utils.prune as prune
-
-import argparse
 
 import src
 
@@ -41,6 +38,7 @@ def create_arg_parser():
     )
     parser.add_argument("--global_prune", action="store_true", help="Use Global Pruning")
     parser.add_argument("--experiment_name", type=str, help="Name of the model")
+    parser.add_argument("--global_prune_iteration", type=int, help="Number of iterative global unstructured pruning to do")
 
     return parser
 
@@ -59,42 +57,11 @@ def main():
         new_state_dict[key[7:]] = value
     model.load_state_dict(new_state_dict)
 
-    parameters_to_prune = [
-        (module, "weight")
-        for module in model.modules()
-        if isinstance(module, torch.nn.Conv2d)
-    ]
+    transform_class = src.Transforms()
 
-    prune.global_unstructured(
-        parameters_to_prune, pruning_method=prune.L1Unstructured, amount=0.3
-    )
+    transform_train = transform_class.transform_train()
 
-    for module in model.modules():
-        if isinstance(module, torch.nn.Conv2d):
-            prune.remove(module, "weight")
-
-    model.half()
-    model.cuda()
-
-    normalize_scratch = transforms.Normalize(
-        (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-    )
-
-    transform_train = transforms.Compose(
-        [
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize_scratch,
-        ]
-    )
-
-    transform_test = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            normalize_scratch,
-        ]
-    )
+    transform_test = transform_class.transform_test()
 
     dataset_dir = os.path.join(args.root_dir, "datasets")
     c10train = CIFAR10(
@@ -137,6 +104,8 @@ def main():
         args.root_dir,
         args.experiment_name,
         scheduler,
+        args.global_prune,
+        args.global_prune_iteration
     )
 
     trainer.train()

@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import torch.nn.utils.prune as prune
 
 from tqdm import tqdm
 
@@ -23,6 +24,8 @@ class Trainer:
         root_dir,
         experiment_name,
         scheduler,
+        iterative_global_prune,
+        global_prune_iteration
     ):
         self.model = model
         self.device = device
@@ -34,29 +37,75 @@ class Trainer:
         self.test_loader = test_loader
         self.root_dir = root_dir
         self.experiment_name = experiment_name
+        self.iterative_global_prune = iterative_global_prune
+        self.global_prune_iteration = global_prune_iteration
+        model.half()
+        model.to(device)
+
         wandb.init(
             project="effdl",
             config={"model": model, "optimizer": optimizer, "max_epochs": max_epochs},
         )
         wandb.watch(self.model)
 
+    def global_prune(self):
+        parameters_to_prune = [
+            (module, "weight")
+            for module in self.model.modules()
+            if isinstance(module, torch.nn.Conv2d)
+        ]
+
+        prune.global_unstructured(
+            parameters_to_prune, pruning_method=prune.L1Unstructured, amount=0.3
+        )
+
+    def remove_pruning(self):
+        for module in self.model.modules():
+            if isinstance(module, torch.nn.Conv2d):
+                prune.remove(module, "weight")
+
+
+    def structured_prune(self):
+        parameters_to_prune = [
+            (module, "weight")
+            for module in self.model.modules()
+            if isinstance(module, torch.nn.Conv2d)
+        ]
+
+        prune.ln_structured(
+            parameters_to_prune, name="weight", amount=0.3, n=1, dim=1 
+        )
+
+        for module in self.model.modules():
+            if isinstance(module, torch.nn.Conv2d):
+                prune.remove(module, "weight")
+
+    def train_loop_one_step(self):
+        self.train_one_step()
+        self.scheduler.step()
+        new_acc = self.test_one_step()
+        return new_acc 
+
     def train(self):
         """
         Train and test loop for a model
         """
-        best_acc = 0
-        for epoch in tqdm(range(self.max_epochs)):
-            self.train_one_step()
-            self.scheduler.step()
-            new_acc = self.test_one_step()
-            if new_acc > best_acc:
-                best_acc = new_acc
-                torch.save(
-                    self.model.state_dict(),
-                    os.path.join(
-                        self.root_dir, "checkpoints", self.experiment_name + ".pt"
-                    )
-                )
+        if self.iterative_global_prune:
+            acc = 0
+            for _ in tqdm(range(self.global_prune_iteration)):
+                self.global_prune()
+                for epoch in range(self.max_epochs):
+                    acc = self.train_loop_one_step()
+            if acc > 90:
+                self.remove_pruning()
+                self.save()
+        else:
+            best_acc = 0
+            for epoch in tqdm(range(self.max_epochs)):
+                acc = self.train_loop_one_step()
+                if acc > best_acc:
+                    self.save()
+        
         wandb.finish()
 
     @torch.no_grad()
@@ -86,3 +135,11 @@ class Trainer:
             loss = self.criterion(outputs, targets)
             loss.backward()
             self.optimizer.step()
+
+    def save(self):
+        torch.save(
+            self.model.state_dict(), 
+            os.path.join(
+                self.root_dir, "checkpoints", self.experiment_name + ".pt"
+            )
+        )

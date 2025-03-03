@@ -23,6 +23,6 @@ class Transforms:
         return transforms.Compose(
             [
                 transforms.ToTensor(),
-                self.normalize_scratch,
+                self.normalize_scratch(),
             ]
         )
