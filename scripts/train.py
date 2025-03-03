@@ -8,7 +8,7 @@ import torch.nn.utils.prune as prune
 
 import argparse
 
-import effdl
+import src
 
 
 def create_arg_parser():
@@ -34,12 +34,13 @@ def create_arg_parser():
         "--weight_decay", type=float, default=0.0001, help="Weight decay"
     )
     parser.add_argument(
-        "--max_epochs", type=int, default=10, help="Maximum number of epochs"
+        "--max_epochs", type=int, default=100, help="Maximum number of epochs"
     )
     parser.add_argument(
         "--root_dir", type=str, default=None, help="Path to the base of directory"
     )
     parser.add_argument("--global_prune", action="store_true", help="Use Global Pruning")
+    parser.add_argument("--experiment_name", type=str, help="Name of the model")
 
     return parser
 
@@ -48,7 +49,7 @@ def main():
     args = create_arg_parser().parse_args()
     match args.model:
         case "densenet":
-            model = effdl.densenet_cifar()
+            model = src.densenet_cifar()
         case _:
             raise ValueError("Model not supported")
 
@@ -122,10 +123,10 @@ def main():
         case _:
             raise ValueError("Optimizer not supported")
 
-    loss_class = effdl.Loss()
+    loss_class = src.Loss()
     criterion = loss_class.cross_entropy_loss()
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.max_epochs)
-    trainer = effdl.Trainer(
+    trainer = src.Trainer(
         model,
         args.device,
         optimizer,

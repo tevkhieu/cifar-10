@@ -52,6 +52,7 @@ class Trainer:
             if new_acc > best_acc:
                 best_acc = new_acc
                 torch.save(
+                    self.model.state_dict(),
                     os.path.join(
                         self.root_dir, "checkpoints", self.experiment_name + ".pt"
                     )
@@ -78,7 +79,7 @@ class Trainer:
 
     def train_one_step(self):
         self.model.train()
-        for inputs, targets in self.trainloader:
+        for inputs, targets in self.train_loader:
             inputs, targets = inputs.half().to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
             outputs = self.model(inputs)

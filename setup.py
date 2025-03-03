@@ -11,6 +11,7 @@ setup(
     install_requires=[
         "torch>=1.10.0",
         "wandb>=0.12.0",
+        "tqdm"
     ],
     python_requires=">=3.7",  # Adjust this depending on your needs
 )
