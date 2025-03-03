@@ -39,6 +39,8 @@ def create_arg_parser():
     parser.add_argument("--global_prune", action="store_true", help="Use Global Pruning")
     parser.add_argument("--experiment_name", type=str, help="Name of the model")
     parser.add_argument("--global_prune_iteration", type=int, help="Number of iterative global unstructured pruning to do")
+    parser.add_argument("--structured_prune", action="store_true", help="Use Structured Pruning")
+    parser.add_argument("--structured_prune_iteration", type=int, help="Number of iterative structured pruning to do")
 
     return parser
 
@@ -105,7 +107,9 @@ def main():
         args.experiment_name,
         scheduler,
         args.global_prune,
-        args.global_prune_iteration
+        args.global_prune_iteration,
+        args.structured_prune,
+        args.structured_prune_iteration
     )
 
     trainer.train()

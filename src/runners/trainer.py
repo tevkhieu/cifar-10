@@ -25,7 +25,9 @@ class Trainer:
         experiment_name,
         scheduler,
         iterative_global_prune,
-        global_prune_iteration
+        global_prune_iteration,
+        iterative_structured_prune,
+        structured_prune_iteration,
     ):
         self.model = model
         self.device = device
@@ -39,6 +41,8 @@ class Trainer:
         self.experiment_name = experiment_name
         self.iterative_global_prune = iterative_global_prune
         self.global_prune_iteration = global_prune_iteration
+        self.iterative_structured_prune = iterative_structured_prune
+        self.structured_prune_iteration = structured_prune_iteration
         model.half()
         model.to(device)
 
@@ -66,19 +70,9 @@ class Trainer:
 
 
     def structured_prune(self):
-        parameters_to_prune = [
-            (module, "weight")
-            for module in self.model.modules()
-            if isinstance(module, torch.nn.Conv2d)
-        ]
-
-        prune.ln_structured(
-            parameters_to_prune, name="weight", amount=0.3, n=1, dim=1 
-        )
-
         for module in self.model.modules():
             if isinstance(module, torch.nn.Conv2d):
-                prune.remove(module, "weight")
+                prune.ln_structured(module, name="weight", amount=0.3, n=1, dim=1)
 
     def train_loop_one_step(self):
         self.train_one_step()
@@ -96,9 +90,17 @@ class Trainer:
                 self.global_prune()
                 for epoch in range(self.max_epochs):
                     acc = self.train_loop_one_step()
-            if acc > 90:
-                self.remove_pruning()
-                self.save()
+            self.remove_pruning()
+            self.save()
+        elif self.iterative_structured_prune:
+            acc = 0
+            for _ in tqdm(range(self.structured_prune_iteration)):
+                self.structured_prune()
+                for epoch in range(self.max_epochs):
+                    acc = self.train_loop_one_step()
+            self.remove_pruning()
+            self.save()
+
         else:
             best_acc = 0
             for epoch in tqdm(range(self.max_epochs)):
