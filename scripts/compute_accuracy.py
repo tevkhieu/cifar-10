@@ -34,19 +34,25 @@ def compute_accuracy(model, state_dict_path, dataset_path, device, quantization)
     quantized_model = copy.deepcopy(model)
     qconfig_mapping = get_default_qconfig_mapping("qnnpack")
     quantized_model.eval()
-    # prepare
+    # Prepare model for quantization
     model_prepared = quantize_fx.prepare_fx(quantized_model, qconfig_mapping, example_inputs)
-    # calibrate (not shown)
-    # quantize
+
+    # **Calibration Step: Run a few batches to collect statistics**
+    for data in dataloader:
+        images, _ = data  # We only need inputs, not labels
+        images = images.to(device)
+        model_prepared(images)  # This step collects statistics for quantization
+
+    # Convert to quantized model
     model_quantized = quantize_fx.convert_fx(model_prepared)
 
-    model.eval()
+    model_quantized.eval()
     correct = 0
     total = 0
     for data in dataloader:
         images, labels = data
         images, labels = images.to(device), labels.to(device)
-        outputs = model(images)
+        outputs = model_quantized(images)
         _, predicted = torch.max(outputs.data, 1)
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
