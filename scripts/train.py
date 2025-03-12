@@ -17,7 +17,7 @@ def create_arg_parser():
     parser.add_argument(
         "--state_dict_path",
         type=str,
-        default="checkpoints/ckpt_sgd_0.1_0.9_0.9_0.999_0.0001",
+        default=None,
         help="Path to the state dict",
     )
     parser.add_argument("--model", type=str, default="densenet", help="Model to use")
@@ -41,6 +41,7 @@ def create_arg_parser():
     parser.add_argument("--global_prune_iteration", type=int, help="Number of iterative global unstructured pruning to do")
     parser.add_argument("--structured_prune", action="store_true", help="Use Structured Pruning")
     parser.add_argument("--structured_prune_iteration", type=int, help="Number of iterative structured pruning to do")
+    parser.add_argument("--dataset_path", type=str, help="Path to the dataset")
 
     return parser
 
@@ -50,14 +51,17 @@ def main():
     match args.model:
         case "densenet":
             model = src.densenet_cifar()
+        case "custom_densenet":
+            model = src.densenet_custom_cifar()
         case _:
             raise ValueError("Model not supported")
 
-    state_dict = torch.load(args.state_dict_path)
-    new_state_dict = {}
-    for key, value in state_dict["net"].items():
-        new_state_dict[key[7:]] = value
-    model.load_state_dict(new_state_dict)
+    if args.state_dict_path is not None:
+        state_dict = torch.load(args.state_dict_path)
+        new_state_dict = {}
+        for key, value in state_dict["net"].items():
+            new_state_dict[key[7:]] = value
+        model.load_state_dict(new_state_dict)
 
     transform_class = src.Transforms()
 
@@ -65,7 +69,11 @@ def main():
 
     transform_test = transform_class.transform_test()
 
-    dataset_dir = os.path.join(args.root_dir, "datasets")
+    if args.dataset_path is None:
+        dataset_dir = os.path.join(args.root_dir, "datasets")
+    else:
+        dataset_dir = args.dataset_path
+        
     c10train = CIFAR10(
         dataset_dir, train=True, download=True, transform=transform_train
     )
