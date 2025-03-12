@@ -68,7 +68,6 @@ class Trainer:
             if isinstance(module, torch.nn.Conv2d):
                 prune.remove(module, "weight")
 
-
     def structured_prune(self):
         for module in self.model.modules():
             if isinstance(module, torch.nn.Conv2d):
@@ -78,7 +77,7 @@ class Trainer:
         self.train_one_step()
         self.scheduler.step()
         new_acc = self.test_one_step()
-        return new_acc 
+        return new_acc
 
     def train(self):
         """
@@ -107,7 +106,7 @@ class Trainer:
                 acc = self.train_loop_one_step()
                 if acc > best_acc:
                     self.save()
-        
+
         wandb.finish()
 
     @torch.no_grad()
@@ -140,8 +139,6 @@ class Trainer:
 
     def save(self):
         torch.save(
-            self.model.state_dict(), 
-            os.path.join(
-                self.root_dir, "checkpoints", self.experiment_name + ".pt"
-            )
+            self.model.state_dict(),
+            os.path.join(self.root_dir, "checkpoints", self.experiment_name + ".pt"),
         )

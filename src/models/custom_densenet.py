@@ -86,5 +86,8 @@ class CustomDensenet(nn.Module):
         out = self.linear(out)
         return out
 
+
 def densenet_custom_cifar():
-    return CustomDensenet(CustomBottleneck, [6, 12, 24, 16], growth_rate=12, reduction=0.25)
+    return CustomDensenet(
+        CustomBottleneck, [6, 12, 24, 16], growth_rate=12, reduction=0.25
+    )
