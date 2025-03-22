@@ -128,7 +128,7 @@ def main():
         case _:
             raise ValueError("Optimizer not supported")
 
-    loss_class = src.Loss(teacher_model, args.use_distillation)
+    loss_class = src.Loss(teacher_model, args.use_distillation, args.device)
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.max_epochs)
     trainer = src.Trainer(

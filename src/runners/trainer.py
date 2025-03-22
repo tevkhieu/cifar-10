@@ -135,14 +135,14 @@ class Trainer:
             for inputs, targets in self.train_loader:
                 inputs, targets = inputs.half().to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
-                loss = self.loss_class.cross_entropy_loss(self.model, inputs, targets)
+                loss = self.loss_class.distilled_cross_entropy(self.model, inputs, targets)
                 loss.backward()
                 self.optimizer.step()
         else:
             for inputs, targets in self.train_loader:
                 inputs, targets = inputs.half().to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
-                loss = self.loss_class.distilled_cross_entropy(self.model, inputs, targets)
+                loss = self.loss_class.cross_entropy_loss(self.model, inputs, targets)
                 loss.backward()
                 self.optimizer.step()
 
