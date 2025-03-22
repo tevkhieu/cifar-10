@@ -105,3 +105,7 @@ def DenseNet161():
 
 def densenet_cifar():
     return DenseNet(Bottleneck, [6, 12, 24, 16], growth_rate=12)
+
+
+def densenet_bis():
+    return DenseNet(Bottleneck, [6, 12, 24, 16], growth_rate=12, reduction=0.25)

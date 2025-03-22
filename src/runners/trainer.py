@@ -17,7 +17,7 @@ class Trainer:
         model,
         device,
         optimizer,
-        criterion,
+        loss_class,
         max_epochs,
         train_loader,
         test_loader,
@@ -28,12 +28,13 @@ class Trainer:
         global_prune_iteration,
         iterative_structured_prune,
         structured_prune_iteration,
+        use_distillation,
     ):
         self.model = model
         self.device = device
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.criterion = criterion
+        self.loss_class = loss_class
         self.max_epochs = max_epochs
         self.train_loader = train_loader
         self.test_loader = test_loader
@@ -43,6 +44,7 @@ class Trainer:
         self.global_prune_iteration = global_prune_iteration
         self.iterative_structured_prune = iterative_structured_prune
         self.structured_prune_iteration = structured_prune_iteration
+        self.use_distillation = use_distillation
         model.half()
         model.to(device)
 
@@ -129,13 +131,20 @@ class Trainer:
 
     def train_one_step(self):
         self.model.train()
-        for inputs, targets in self.train_loader:
-            inputs, targets = inputs.half().to(self.device), targets.to(self.device)
-            self.optimizer.zero_grad()
-            outputs = self.model(inputs)
-            loss = self.criterion(outputs, targets)
-            loss.backward()
-            self.optimizer.step()
+        if self.use_distillation:
+            for inputs, targets in self.train_loader:
+                inputs, targets = inputs.half().to(self.device), targets.to(self.device)
+                self.optimizer.zero_grad()
+                loss = self.loss_class.cross_entropy_loss(self.model, inputs, targets)
+                loss.backward()
+                self.optimizer.step()
+        else:
+            for inputs, targets in self.train_loader:
+                inputs, targets = inputs.half().to(self.device), targets.to(self.device)
+                self.optimizer.zero_grad()
+                loss = self.loss_class.distilled_cross_entropy(self.model, inputs, targets)
+                loss.backward()
+                self.optimizer.step()
 
     def save(self):
         torch.save(

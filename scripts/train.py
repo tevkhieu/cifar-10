@@ -54,7 +54,17 @@ def create_arg_parser():
         help="Number of iterative structured pruning to do",
     )
     parser.add_argument("--dataset_path", type=str, help="Path to the dataset")
-
+    parser.add_argument(
+        "--teacher_model", type=str, default="densenet", help="Name of the model"
+    )
+    parser.add_argument(
+        "--teacher_state_dict_path",
+        type=str,
+        help="Path to the teacher state dictionnary",
+    )
+    parser.add_argument(
+        "--use_distillation", action="store_true", help="Use distillation"
+    )
     return parser
 
 
@@ -62,18 +72,24 @@ def main():
     args = create_arg_parser().parse_args()
     match args.model:
         case "densenet":
-            model = src.densenet_cifar()
+            model = src.densenet_bis()
         case "custom_densenet":
             model = src.densenet_custom_cifar()
         case _:
             raise ValueError("Model not supported")
-
     if args.state_dict_path is not None:
         state_dict = torch.load(args.state_dict_path)
-        new_state_dict = {}
-        for key, value in state_dict["net"].items():
-            new_state_dict[key[7:]] = value
-        model.load_state_dict(new_state_dict)
+        model.load_state_dict(state_dict)
+
+    teacher_model = None
+    if args.use_distillation:
+        match args.teacher_model:
+            case "densenet":
+                teacher_model = src.densenet_cifar()
+            case _:
+                raise ValueError("Teacher model not supported")
+        teacher_state_dict = torch.load(args.teacher_state_dict_path)
+        teacher_model.load_state_dict(teacher_state_dict)
 
     transform_class = src.Transforms()
 
@@ -91,8 +107,8 @@ def main():
     )
     c10test = CIFAR10(dataset_dir, train=False, download=True, transform=transform_test)
 
-    trainloader = DataLoader(c10train, batch_size=32)
-    testloader = DataLoader(c10test, batch_size=32)
+    trainloader = DataLoader(c10train, batch_size=64, shuffle=True)
+    testloader = DataLoader(c10test, batch_size=64)
 
     match args.optimizer:
         case "sgd":
@@ -112,14 +128,14 @@ def main():
         case _:
             raise ValueError("Optimizer not supported")
 
-    loss_class = src.Loss()
-    criterion = loss_class.cross_entropy_loss()
+    loss_class = src.Loss(teacher_model, args.use_distillation)
+
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.max_epochs)
     trainer = src.Trainer(
         model,
         args.device,
         optimizer,
-        criterion,
+        loss_class,
         args.max_epochs,
         trainloader,
         testloader,
@@ -130,6 +146,7 @@ def main():
         args.global_prune_iteration,
         args.structured_prune,
         args.structured_prune_iteration,
+        args.use_distillation,
     )
 
     trainer.train()

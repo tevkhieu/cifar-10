@@ -6,6 +6,7 @@ from .models import (
     DenseNet169,
     DenseNet201,
     densenet_custom_cifar,
+    densenet_bis,
 )
 from .runners import Trainer
 from .utils import Transforms
