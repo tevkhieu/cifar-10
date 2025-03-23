@@ -24,8 +24,8 @@ class Trainer:
         root_dir,
         experiment_name,
         scheduler,
-        iterative_global_prune,
-        global_prune_iteration,
+        iterative_unstructured_prune,
+        unstructured_prune_iteration,
         iterative_structured_prune,
         structured_prune_iteration,
         use_distillation,
@@ -40,8 +40,8 @@ class Trainer:
         self.test_loader = test_loader
         self.root_dir = root_dir
         self.experiment_name = experiment_name
-        self.iterative_global_prune = iterative_global_prune
-        self.global_prune_iteration = global_prune_iteration
+        self.iterative_unstructured_prune = iterative_unstructured_prune
+        self.unstructured_prune_iteration = unstructured_prune_iteration
         self.iterative_structured_prune = iterative_structured_prune
         self.structured_prune_iteration = structured_prune_iteration
         self.use_distillation = use_distillation
@@ -54,7 +54,7 @@ class Trainer:
         )
         wandb.watch(self.model)
 
-    def global_prune(self):
+    def unstructured_prune(self):
         parameters_to_prune = [
             (module, "weight")
             for module in self.model.modules()
@@ -85,20 +85,22 @@ class Trainer:
         """
         Train and test loop for a model
         """
-        if self.iterative_global_prune:
+        if self.iterative_unstructured_prune:
             acc = 0
-            for _ in tqdm(range(self.global_prune_iteration)):
-                self.global_prune()
+            for iteration in tqdm(range(self.unstructured_prune_iteration)):
+                self.unstructured_prune()
                 for epoch in range(self.max_epochs):
                     acc = self.train_loop_one_step()
+                self.save_intermediate(iteration)
             self.remove_pruning()
             self.save()
         elif self.iterative_structured_prune:
             acc = 0
-            for _ in tqdm(range(self.structured_prune_iteration)):
+            for iteration in tqdm(range(self.structured_prune_iteration)):
                 self.structured_prune()
                 for epoch in range(self.max_epochs):
                     acc = self.train_loop_one_step()
+                self.save_intermediate(iteration)
             self.remove_pruning()
             self.save()
 
@@ -135,7 +137,9 @@ class Trainer:
             for inputs, targets in self.train_loader:
                 inputs, targets = inputs.half().to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
-                loss = self.loss_class.distilled_cross_entropy(self.model, inputs, targets)
+                loss = self.loss_class.distilled_cross_entropy(
+                    self.model, inputs, targets
+                )
                 loss.backward()
                 self.optimizer.step()
         else:
@@ -150,4 +154,14 @@ class Trainer:
         torch.save(
             self.model.state_dict(),
             os.path.join(self.root_dir, "checkpoints", self.experiment_name + ".pt"),
+        )
+
+    def save_intermediate(self, iteration):
+        torch.save(
+            self.model.state_dict(),
+            os.path.join(
+                self.root_dir,
+                "checkpoints",
+                self.experiment_name + str(iteration) + ".pt",
+            ),
         )

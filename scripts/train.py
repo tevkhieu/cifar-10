@@ -37,11 +37,13 @@ def create_arg_parser():
         "--root_dir", type=str, default=None, help="Path to the base of directory"
     )
     parser.add_argument(
-        "--global_prune", action="store_true", help="Use Global Pruning"
+        "--unstructured_prune",
+        action="store_true",
+        help="Use Global Unstructured Pruning",
     )
     parser.add_argument("--experiment_name", type=str, help="Name of the model")
     parser.add_argument(
-        "--global_prune_iteration",
+        "--unstructured_prune_iteration",
         type=int,
         help="Number of iterative global unstructured pruning to do",
     )
@@ -75,6 +77,8 @@ def main():
             model = src.densenet_bis()
         case "custom_densenet":
             model = src.densenet_custom_cifar()
+        case "depth_densenet":
+            model = src.depth_densenet_cifar()
         case _:
             raise ValueError("Model not supported")
     if args.state_dict_path is not None:
@@ -142,8 +146,8 @@ def main():
         args.root_dir,
         args.experiment_name,
         scheduler,
-        args.global_prune,
-        args.global_prune_iteration,
+        args.unstructured_prune,
+        args.unstructured_prune_iteration,
         args.structured_prune,
         args.structured_prune_iteration,
         args.use_distillation,

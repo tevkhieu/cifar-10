@@ -7,3 +7,4 @@ from .densenet import (
     densenet_bis,
 )
 from .custom_densenet import densenet_custom_cifar
+from .depth_densenet import depth_densenet_cifar
