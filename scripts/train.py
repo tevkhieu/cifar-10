@@ -67,6 +67,9 @@ def create_arg_parser():
     parser.add_argument(
         "--use_distillation", action="store_true", help="Use distillation"
     )
+    parser.add_argument(
+        "--prune_ratio", type=float, default=0.1, help="Prune ratio for pruning"
+    )
     return parser
 
 
@@ -151,6 +154,7 @@ def main():
         args.structured_prune,
         args.structured_prune_iteration,
         args.use_distillation,
+        args.prune_ratio,
     )
 
     trainer.train()

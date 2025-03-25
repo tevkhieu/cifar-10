@@ -29,6 +29,7 @@ class Trainer:
         iterative_structured_prune,
         structured_prune_iteration,
         use_distillation,
+        prune_ratio,
     ):
         self.model = model
         self.device = device
@@ -45,6 +46,7 @@ class Trainer:
         self.iterative_structured_prune = iterative_structured_prune
         self.structured_prune_iteration = structured_prune_iteration
         self.use_distillation = use_distillation
+        self.prune_ratio = prune_ratio
         model.half()
         model.to(device)
 
@@ -62,7 +64,9 @@ class Trainer:
         ]
 
         prune.global_unstructured(
-            parameters_to_prune, pruning_method=prune.L1Unstructured, amount=0.3
+            parameters_to_prune,
+            pruning_method=prune.L1Unstructured,
+            amount=self.prune_ratio,
         )
 
     def remove_pruning(self):
@@ -73,7 +77,9 @@ class Trainer:
     def structured_prune(self):
         for module in self.model.modules():
             if isinstance(module, torch.nn.Conv2d):
-                prune.ln_structured(module, name="weight", amount=0.3, n=1, dim=1)
+                prune.ln_structured(
+                    module, name="weight", amount=self.prune_ratio, n=1, dim=1
+                )
 
     def train_loop_one_step(self):
         self.train_one_step()

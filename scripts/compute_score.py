@@ -32,6 +32,7 @@ def compute_score(model, quantization, pruning):
     score_ops = (
         (1 - pruning) * max(quantization) * modelSummary.total_mult_adds / 32 / opsRef
     )
+    print(nonzero)
     print(score_param, score_ops)
     return score_param + score_ops
 
@@ -43,6 +44,8 @@ def main():
             model = src.densenet_cifar()
         case "custom_densenet":
             model = src.densenet_custom_cifar()
+        case "depth_densenet":
+            model = src.depth_densenet_cifar()
         case _:
             raise ValueError("Model not supported")
 

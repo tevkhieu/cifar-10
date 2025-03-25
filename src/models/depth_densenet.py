@@ -15,7 +15,12 @@ class DepthBottleneck(nn.Module):
         if use_bn:
             self.bn2 = nn.BatchNorm2d(4 * growth_rate)
         self.conv2 = nn.Conv2d(
-            4 * growth_rate, growth_rate, kernel_size=3, padding=1, bias=False, groups=growth_rate
+            4 * growth_rate,
+            growth_rate,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            groups=growth_rate,
         )
 
     def forward(self, x):
@@ -48,7 +53,9 @@ class DepthDensenet(nn.Module):
         num_planes = 2 * growth_rate
         self.conv1 = nn.Conv2d(3, num_planes, kernel_size=3, padding=1, bias=False)
 
-        self.dense1 = self._make_dense_layers(block, num_planes, nblocks[0], use_bn=False)
+        self.dense1 = self._make_dense_layers(
+            block, num_planes, nblocks[0], use_bn=False
+        )
         num_planes += nblocks[0] * growth_rate
         out_planes = int(math.floor(num_planes * reduction))
         self.trans1 = DepthTransition(num_planes, out_planes)
@@ -60,7 +67,9 @@ class DepthDensenet(nn.Module):
         self.trans2 = DepthTransition(num_planes, out_planes)
         num_planes = out_planes
 
-        self.dense3 = self._make_dense_layers(block, num_planes, nblocks[2], use_bn=False)
+        self.dense3 = self._make_dense_layers(
+            block, num_planes, nblocks[2], use_bn=False
+        )
         num_planes += nblocks[2] * growth_rate
         out_planes = int(math.floor(num_planes * reduction))
         self.trans3 = DepthTransition(num_planes, out_planes)
